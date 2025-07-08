@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use crate::storage;
+use crate::{orm, storage};
 
 #[derive(Parser)]
 #[command(name = "securepkg")]
@@ -15,7 +15,7 @@ pub enum Commands {
     Init,
 }
 
-pub fn run() {
+pub async fn run() {
     let cli = Cli::parse();
 
     match cli.command {
@@ -25,6 +25,11 @@ pub fn run() {
                 eprintln!("Set up error: {e}");
             } else {
                 println!("✅ Local repository initialized ~/.securepkg");
+            }
+
+            match orm::connectdb().await {
+                Ok(_) => println!("🔗 DB connected correctly"),
+                Err(e) => eprintln!("❌ Error to connect DB: '{e}'")
             }
         }
     }

@@ -6,10 +6,10 @@ securepkg/
 │   ├── crypto.rs       # Funciones de cifrado y firma
 │   ├── dsl.rs          # Macro `package!`
 │   ├── storage.rs      # Guarda y lee paquetes
-│   └── orm/            # ORM (DB, models, schema)
-│       ├── mod.rs
-│       ├── models.rs
-│       └── schema.rs
+│   └── orm/            # ORM
+│       ├── mod.rs        # input
+│       ├── models.rs     # entities
+│       └── schema.rs     # tables
 └── Cargo.toml
 ```
 iniciar: cargo run -- init
