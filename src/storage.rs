@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::path::PathBuf;
 
 pub fn init_local_repo() -> std::io::Result<()> {
     let home_path = dirs::home_dir().expect("Could not get HOME directory");
@@ -19,4 +20,14 @@ pub fn init_local_repo() -> std::io::Result<()> {
         println!("🗄️ Database created: {}", db_path.display());
     }
     Ok(())
+}
+
+pub fn get_securepkg_dir() -> PathBuf {
+    dirs::home_dir()
+        .expect("Could not get HOME")
+        .join(".securepkg")
+}
+
+pub fn get_db_path() -> PathBuf {
+    get_securepkg_dir().join("db.sqlite")
 }
