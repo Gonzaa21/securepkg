@@ -12,3 +12,4 @@ securepkg/
 │       └── schema.rs
 └── Cargo.toml
 ```
+iniciar: cargo run -- init

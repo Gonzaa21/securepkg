@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use crate::storage;
 
 #[derive(Parser)]
 #[command(name = "securepkg")]
@@ -20,6 +21,11 @@ pub fn run() {
     match cli.command {
         Commands::Init => {
             println!("Starting...");
+            if let Err(e) = storage::init_local_repo() {
+                eprintln!("Set up error: {e}");
+            } else {
+                println!("✅ Local repository initialized ~/.securepkg");
+            }
         }
     }
 }
