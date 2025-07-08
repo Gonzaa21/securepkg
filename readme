@@ -1,0 +1,14 @@
+```bash
+securepkg/
+├── src/
+│   ├── main.rs
+│   ├── cli.rs          # Comandos con clap
+│   ├── crypto.rs       # Funciones de cifrado y firma
+│   ├── dsl.rs          # Macro `package!`
+│   ├── storage.rs      # Guarda y lee paquetes
+│   └── orm/            # ORM (DB, models, schema)
+│       ├── mod.rs
+│       ├── models.rs
+│       └── schema.rs
+└── Cargo.toml
+```
