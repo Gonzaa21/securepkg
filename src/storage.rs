@@ -12,7 +12,7 @@ pub fn init_local_repo() -> std::io::Result<()> {
         println!("📁 Folder created: {}", folder_path.display());
     }
 
-    let db_path = home_path.join("db.sqlite");
+    let db_path = folder_path.join("db.sqlite");
     if db_path.exists() { // verifying if SQLite database exist
         println!("🗄️ Already existing database: {}", db_path.display());
     } else {

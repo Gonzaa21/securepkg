@@ -28,7 +28,10 @@ pub async fn run() {
             }
 
             match orm::connectdb().await {
-                Ok(_) => println!("🔗 DB connected correctly"),
+                Ok(conn) => {
+                    println!("🔗 DB connected correctly");
+                    orm::create_table(&conn).await.expect("❌ Error creating table");
+                },
                 Err(e) => eprintln!("❌ Error to connect DB: '{e}'")
             }
         }
