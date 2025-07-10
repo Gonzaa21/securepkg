@@ -3,6 +3,7 @@ use sea_orm::{Database, DatabaseConnection};
 use sea_orm::{DbBackend, Statement, ConnectionTrait};
 use sea_query::{Table, ColumnDef, Expr, Iden};
 use crate::storage;
+pub mod models;
 
 // connect to database
 pub async fn connectdb() -> Result<DatabaseConnection, sea_orm::DbErr> {
