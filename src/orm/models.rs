@@ -22,7 +22,7 @@ pub struct Model {
 impl ActiveModelBehavior for ActiveModel {}
 
 // insert_pkg function to use in publish cmd
-pub async fn insert_package(
+pub async fn _insert_package(
     conn: &DatabaseConnection,
     name: String,
     version: String,

@@ -1,6 +1,9 @@
 use clap::{Parser, Subcommand};
 use crate::{orm, storage};
+use std::path::PathBuf;
+use crate::package::zip_dir;
 
+// CLI struct
 #[derive(Parser)]
 #[command(name = "securepkg")]
 #[command(about = "Encrypted package manager", long_about = None)]
@@ -9,10 +12,27 @@ pub struct Cli {
     pub command: Commands,
 }
 
+// Commands
 #[derive(Subcommand)]
 pub enum Commands {
     /// Start package environment
     Init,
+    Package {
+        #[command(subcommand)]
+        subcommand: PackageSubcommand,
+    }
+}
+
+// Subcommands
+#[derive(Subcommand)]
+pub enum PackageSubcommand {
+    Build {
+        path: PathBuf,
+        name: String,
+        version: String,
+        author: Option<String>,
+    },
+    // ...
 }
 
 pub async fn run() {
@@ -33,6 +53,22 @@ pub async fn run() {
                     orm::create_table(&conn).await.expect("❌ Error creating table");
                 },
                 Err(e) => eprintln!("❌ Error to connect DB: '{e}'")
+            }
+        },
+        Commands::Package { subcommand } => {
+            match subcommand {
+                PackageSubcommand::Build { path, name, version, author } => {
+                    println!("🚧 package build:");
+                    println!("Path: {path:?}, Name: {name}, Version: {version}, Author: {:?}", author);
+
+                    let filename = format!("{}-{}.zip", name, version);
+                    let output_path = PathBuf::from(filename);
+
+                    match zip_dir(&path, &output_path) {
+                        Ok(_) => println!("✅ Package created at {:?}", output_path),
+                        Err(e) => eprintln!("❌ Error creating package: {:?}", e),
+                    }
+                }
             }
         }
     }
