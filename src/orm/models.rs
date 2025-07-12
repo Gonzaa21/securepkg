@@ -22,20 +22,15 @@ pub struct Model {
 impl ActiveModelBehavior for ActiveModel {}
 
 // insert_pkg function to use in publish cmd
-pub async fn _insert_package(
-    conn: &DatabaseConnection,
-    name: String,
-    version: String,
-    author: Option<String>,
-) -> Result<(), sea_orm::DbErr> {
+pub async fn insert_package(conn: &DatabaseConnection, name: String, version: String, author: Option<String>, hash: Option<String>, encrypted_path: Option<String>) -> Result<(), sea_orm::DbErr> {
     let new_package = ActiveModel {
         id: ActiveValue::NotSet,
         name: ActiveValue::Set(name),
         version: ActiveValue::Set(version),
         author: ActiveValue::Set(author),
-        hash: ActiveValue::Set(None),
+        hash: ActiveValue::Set(hash),
         signature: ActiveValue::Set(None),
-        encrypted_path: ActiveValue::Set(None),
+        encrypted_path: ActiveValue::Set(encrypted_path),
         created_at: ActiveValue::Set(Utc::now()),
     };
 

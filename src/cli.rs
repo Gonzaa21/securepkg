@@ -1,7 +1,9 @@
 use clap::{Parser, Subcommand};
 use crate::{orm, package::encrypt_zip, storage};
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 use crate::package::zip_dir;
+use sha2::{Sha256, Digest};
+use hex;
 
 // CLI struct
 #[derive(Parser)]
@@ -46,14 +48,6 @@ pub async fn run() {
             } else {
                 println!("✅ Local repository initialized ~/.securepkg");
             }
-
-            match orm::connectdb().await {
-                Ok(conn) => {
-                    println!("🔗 DB connected correctly");
-                    orm::create_table(&conn).await.expect("❌ Error creating table");
-                },
-                Err(e) => eprintln!("❌ Error to connect DB: '{e}'")
-            }
         },
         Commands::Package { subcommand } => {
             match subcommand {
@@ -76,6 +70,30 @@ pub async fn run() {
                     match encrypt_zip(&input, &output, &key) {
                         Ok(_) => println!("🔐 archive encrypted correctly {:?}", output),
                         Err(e) => eprintln!("❌ Error encrypting file: {:?}", e),
+                    }
+
+                    // connect and save pkg into DB
+                    let data_pkg = fs::read(&output);
+                    let mut hasher = Sha256::new(); // create hash
+                    hasher.update(data_pkg.unwrap()); // update hash using data_pkg
+                    let hash = hasher.finalize(); // return result
+                    let hash_hex = hex::encode(&hash); // convert to hex string
+                    
+                    let conn = match orm::connectdb().await {
+                        Ok(conn) => {
+                            println!("🔗 DB connected correctly");
+                            conn
+                        },
+                        Err(e) => {
+                            eprintln!("❌ Error to connect DB: '{e}'");
+                            return;
+                        }
+                    };
+
+                    orm::create_table(&conn).await.expect("❌ Error creating table");
+                    match orm::insert_package(&conn, name, version, author, Some(hash_hex), Some(output.to_string_lossy().to_string())).await {
+                        Ok(_) => println!("📦 Package inserted into database"),
+                        Err(e) => eprintln!("❌ Error inserting into database: {:?}", e),
                     }
                 }
             }

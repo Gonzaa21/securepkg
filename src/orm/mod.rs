@@ -4,6 +4,7 @@ use sea_orm::{DbBackend, Statement, ConnectionTrait};
 use sea_query::{Table, ColumnDef, Expr, Iden};
 use crate::storage;
 pub mod models;
+pub use models::insert_package;
 
 // connect to database
 pub async fn connectdb() -> Result<DatabaseConnection, sea_orm::DbErr> {
