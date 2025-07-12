@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use crate::{orm, storage};
+use crate::{orm, package::encrypt_zip, storage};
 use std::path::PathBuf;
 use crate::package::zip_dir;
 
@@ -67,6 +67,15 @@ pub async fn run() {
                     match zip_dir(&path, &output_path) {
                         Ok(_) => println!("✅ Package created at {:?}", output_path),
                         Err(e) => eprintln!("❌ Error creating package: {:?}", e),
+                    }
+                    
+                    let input = PathBuf::from(format!("{}-{}.zip", name, version));
+                    let output = storage::get_pkg_dir().join(format!("{}-{}.pkg", name, version));
+                    let key = storage::get_key_path();
+
+                    match encrypt_zip(&input, &output, &key) {
+                        Ok(_) => println!("🔐 archive encrypted correctly {:?}", output),
+                        Err(e) => eprintln!("❌ Error encrypting file: {:?}", e),
                     }
                 }
             }
