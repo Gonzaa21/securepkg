@@ -1,11 +1,16 @@
 use std::fs::{self, File};
+use std::path::Path;
 use chacha20poly1305::aead::rand_core::RngCore;
 use chacha20poly1305::aead::{Aead, OsRng};
 use chacha20poly1305::{ChaCha20Poly1305, Key, KeyInit, Nonce};
 use zip::write::FileOptions;
 use zip::CompressionMethod;
-use std::path::Path;
 use walkdir::WalkDir;
+use rsa::pkcs1::DecodeRsaPrivateKey;
+use rsa::RsaPrivateKey;
+use sha2::Digest;
+use sha2::Sha256;
+use rsa::Pkcs1v15Sign;
 
 // to compress dirs in .zip
 pub fn zip_dir(src_dir: &Path, dst_file: &Path) -> zip::result::ZipResult<()> {
@@ -51,7 +56,7 @@ pub fn encrypt_zip(input: &Path, output: &Path, key: &Path) -> Result<(), Box<dy
 
     let mut content = Vec::with_capacity(nonce.len() + cipher_text.iter().len());
     content.extend_from_slice(nonce); // add elements in nonce
-    content.extend_from_slice(&cipher_text); // espera un &[u8]
+    content.extend_from_slice(&cipher_text); // wait a &[u8]
 
     std::fs::write(output, &content)?; // write content in pkg path
     
@@ -62,4 +67,25 @@ pub fn encrypt_zip(input: &Path, output: &Path, key: &Path) -> Result<(), Box<dy
     //     }
     // }
     Ok(())
+}
+
+// sign .pkg with priv key
+pub fn sign_pkg(pkg_path: &Path) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let pkg_data = fs::read(pkg_path)?; // read content .pkg
+
+    // read private key path
+    let priv_key_path = dirs::home_dir()
+        .expect("Could not get HOME directory")
+        .join(".securepkg")
+        .join("keys")
+        .join("private.pem");
+
+    let pem = fs::read_to_string(priv_key_path)?;
+    let private_key = RsaPrivateKey::from_pkcs1_pem(&pem)?;
+
+    // hash pkg content and sign
+    let digest = Sha256::digest(&pkg_data);
+    let signature = private_key.sign(Pkcs1v15Sign::new::<Sha256>(), &digest)?;
+
+    Ok(signature)
 }

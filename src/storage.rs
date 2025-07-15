@@ -1,9 +1,11 @@
 use std::fs::File;
 use std::path::PathBuf;
-
 use rand::Rng;
+use rsa::pkcs1::{EncodeRsaPrivateKey, EncodeRsaPublicKey};
+use rsa::rand_core::OsRng;
+use tokio::fs;
 
-pub fn init_local_repo() -> std::io::Result<()> {
+pub async fn init_local_repo() -> std::io::Result<()> {
     let home_path = dirs::home_dir().expect("Could not get HOME directory");
     let folder_path = home_path.join(".securepkg");
     let key_dir = folder_path.join("keys");
@@ -47,9 +49,47 @@ pub fn init_local_repo() -> std::io::Result<()> {
         File::create(&db_path)?;
         println!("🗄️ Database created: {}", db_path.display());
     }
+
+    generate_keypair().await?;
     Ok(())
 }
 
+async fn generate_keypair() -> std::io::Result<()> {
+    // paths
+    let key_dir = dirs::home_dir()
+        .expect("Could not get HOME directory")
+        .join(".securepkg")
+        .join("keys");
+    let private_key_path = key_dir.join("private.pem");
+    let public_key_path = key_dir.join("public.pem");
+
+    // verify if paths already exists
+    if private_key_path.exists() && public_key_path.exists() {
+        println!("🔑 RSA keypair already exists.");
+        return Ok(());
+    }
+
+    // generate keys
+    let mut rng = OsRng;
+    let bits = 2048;
+
+    let private_key = rsa::RsaPrivateKey::new(&mut rng, bits)
+        .expect("Failed to generate private key");
+
+    let public_key = rsa::RsaPublicKey::from(&private_key);
+
+    // convert keys to PEM
+    let priv_key_pem = &private_key.to_pkcs1_pem(Default::default()).unwrap();
+    let pub_key_pem = &public_key.to_pkcs1_pem(Default::default()).unwrap();
+
+    // write keys
+    fs::write(private_key_path, priv_key_pem).await?;
+    fs::write(public_key_path, pub_key_pem).await?;
+
+    Ok(())
+}
+
+// get funcions
 pub fn get_securepkg_dir() -> PathBuf {
     dirs::home_dir()
         .expect("Could not get HOME")

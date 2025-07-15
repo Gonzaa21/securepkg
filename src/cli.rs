@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use crate::{orm, package::encrypt_zip, storage};
+use crate::{orm::{self, models::find_pkg}, package::{encrypt_zip, sign_pkg}, storage};
 use std::{fs, path::PathBuf};
 use crate::package::zip_dir;
 use sha2::{Sha256, Digest};
@@ -34,7 +34,10 @@ pub enum PackageSubcommand {
         version: String,
         author: Option<String>,
     },
-    // ...
+    Publish {
+        name: String,
+        version: String
+    }
 }
 
 pub async fn run() {
@@ -43,7 +46,7 @@ pub async fn run() {
     match cli.command {
         Commands::Init => {
             println!("Starting...");
-            if let Err(e) = storage::init_local_repo() {
+            if let Err(e) = storage::init_local_repo().await {
                 eprintln!("Set up error: {e}");
             } else {
                 println!("✅ Local repository initialized ~/.securepkg");
@@ -95,6 +98,61 @@ pub async fn run() {
                         Ok(_) => println!("📦 Package inserted into database"),
                         Err(e) => eprintln!("❌ Error inserting into database: {:?}", e),
                     }
+                },
+                PackageSubcommand::Publish { name, version } => {
+                    // connect to db
+                    let conn = match orm::connectdb().await {
+                        Ok(conn) => conn,
+                        Err(e) => {
+                            eprintln!("❌ Error to connect DB: {e}");
+                            return;
+                        }
+                    };
+
+                    // verify if package exists
+                    let pkg = match find_pkg(&conn, &name, &version).await {
+                        Ok(Some(pkg)) => {
+                            println!("📦 Package found: {:?}", pkg);
+                            pkg
+                        },
+                        Ok(None) => {
+                            eprintln!("❌ Package not found in database");
+                            return;
+                        },
+                        Err(e) => {
+                            eprintln!("❌ DB error: {:?}", e);
+                            return;
+                        }
+                    };
+
+                    // sign
+                    let pkg_path = PathBuf::from(pkg.encrypted_path.unwrap());
+                    let signature = match sign_pkg(&pkg_path) {
+                        Ok(sig) => {
+                            println!("🖊️ Package successfully signed");
+                            sig
+                        }
+                        Err(e) => {
+                            eprintln!("❌ Signature error: {:?}", e);
+                            return;
+                        }
+                    };
+
+                    let sig_path = pkg_path.with_extension("sig"); // convert .pkg to .sig
+                    // save in .sig file
+                    match fs::write(&sig_path, &signature) {
+                        Ok(_) => println!("💾 Signature saved to: {:?}", sig_path),
+                        Err(e) => {
+                            eprintln!("❌ Error writing signature file: {:?}", e);
+                            return;
+                        }
+                    };
+
+                    match orm::models::update_signature(&conn, &name, &version, signature).await {
+                        Ok(_) => println!("🗄️ Signature updated in database"),
+                        Err(e) => eprintln!("❌ Error saving signature in DB: {:?}", e),
+                    }
+
                 }
             }
         }
