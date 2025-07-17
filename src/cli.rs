@@ -1,8 +1,8 @@
 use clap::{Parser, Subcommand};
 use crate::{orm::{self, models::find_pkg}, package::{encrypt_zip, sign_pkg}, storage};
 use std::{fs, path::PathBuf};
-use crate::package::{zip_dir, export_pkg};
-use sha2::{Sha256, Digest};
+use crate::package::{zip_dir, export_pkg, install_pkg};
+use sha2::{Digest, Sha256};
 use hex;
 
 // CLI struct
@@ -47,6 +47,12 @@ pub enum PackageSubcommand {
         version: String,
         repo: Option<String>
     },
+    Install {
+        name: String,
+        version: String,
+        #[arg(long, value_name = "PATH")]
+        from_file: Option<PathBuf>
+    }
 }
 
 pub async fn run() {
@@ -188,7 +194,11 @@ pub async fn run() {
                         eprintln!("❌ Error exporting package: {e}");
                     }
                 }
-
+                PackageSubcommand::Install { name, version, from_file } => {
+                    if let Err(e) = install_pkg(&name, &version, from_file.as_deref()).await {
+                        eprintln!("❌ Installation failed: {e}");
+                    }
+                }
             }
         }
     }
