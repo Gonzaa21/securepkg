@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use crate::{orm::{self, models::find_pkg}, package::{encrypt_zip, sign_pkg}, storage};
 use std::{fs, path::PathBuf};
-use crate::package::zip_dir;
+use crate::package::{zip_dir, export_pkg};
 use sha2::{Sha256, Digest};
 use hex;
 
@@ -36,8 +36,17 @@ pub enum PackageSubcommand {
     },
     Publish {
         name: String,
-        version: String
-    }
+        version: String,    
+        #[arg(long)]
+        export: bool,
+        #[arg(long)]
+        repo: Option<String>
+    },
+    Export {
+        name: String,
+        version: String,
+        repo: Option<String>
+    },
 }
 
 pub async fn run() {
@@ -99,7 +108,7 @@ pub async fn run() {
                         Err(e) => eprintln!("❌ Error inserting into database: {:?}", e),
                     }
                 },
-                PackageSubcommand::Publish { name, version } => {
+                PackageSubcommand::Publish { name, version, export, repo } => {
                     // connect to db
                     let conn = match orm::connectdb().await {
                         Ok(conn) => conn,
@@ -148,12 +157,38 @@ pub async fn run() {
                         }
                     };
 
+                    // save sign in db
                     match orm::models::update_signature(&conn, &name, &version, signature).await {
                         Ok(_) => println!("🗄️ Signature updated in database"),
                         Err(e) => eprintln!("❌ Error saving signature in DB: {:?}", e),
                     }
 
+                    // export
+                    let repo_path = repo.as_deref();
+                    if export {
+                        if let Err(e) = export_pkg(&name, &version, &conn, repo_path).await {
+                            eprintln!("❌ Error exporting package: {e}");
+                        }
+                    }
+
                 }
+                PackageSubcommand::Export { name, version, repo } => {
+                    // connect to db
+                    let conn = match orm::connectdb().await {
+                        Ok(conn) => conn,
+                        Err(e) => {
+                            eprintln!("❌ Error to connect DB: {e}");
+                            return;
+                        }
+                    };
+
+                    // export
+                    let repo_path = repo.as_deref();
+                    if let Err(e) = export_pkg(&name, &version, &conn, repo_path).await {
+                        eprintln!("❌ Error exporting package: {e}");
+                    }
+                }
+
             }
         }
     }

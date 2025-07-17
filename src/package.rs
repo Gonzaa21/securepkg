@@ -1,16 +1,11 @@
-use std::fs::{self, File};
-use std::path::Path;
-use chacha20poly1305::aead::rand_core::RngCore;
-use chacha20poly1305::aead::{Aead, OsRng};
-use chacha20poly1305::{ChaCha20Poly1305, Key, KeyInit, Nonce};
-use zip::write::FileOptions;
-use zip::CompressionMethod;
+use std::{fs::{self, File}, path::{Path, PathBuf}};
+use chacha20poly1305::{ChaCha20Poly1305, Key, KeyInit, Nonce, aead::{Aead, OsRng, rand_core::RngCore}};
+use zip::{write::FileOptions, CompressionMethod};
 use walkdir::WalkDir;
-use rsa::pkcs1::DecodeRsaPrivateKey;
-use rsa::RsaPrivateKey;
-use sha2::Digest;
-use sha2::Sha256;
-use rsa::Pkcs1v15Sign;
+use rsa::{pkcs1::DecodeRsaPrivateKey, RsaPrivateKey, Pkcs1v15Sign};
+use sha2::{Digest, Sha256};
+use crate::{orm, storage};
+use sea_orm::DatabaseConnection;
 
 // to compress dirs in .zip
 pub fn zip_dir(src_dir: &Path, dst_file: &Path) -> zip::result::ZipResult<()> {
@@ -60,12 +55,6 @@ pub fn encrypt_zip(input: &Path, output: &Path, key: &Path) -> Result<(), Box<dy
 
     std::fs::write(output, &content)?; // write content in pkg path
     
-    // if let Some(parent) = output.parent() {
-    //     if !parent.exists() {
-    //         println!("⚠️ Output directory did not exist. Creating: {}", parent.display());
-    //         std::fs::create_dir_all(parent)?;
-    //     }
-    // }
     Ok(())
 }
 
@@ -88,4 +77,39 @@ pub fn sign_pkg(pkg_path: &Path) -> Result<Vec<u8>, Box<dyn std::error::Error>> 
     let signature = private_key.sign(Pkcs1v15Sign::new::<Sha256>(), &digest)?;
 
     Ok(signature)
+}
+
+// export pkg
+pub async fn export_pkg(name: &str, version: &str, conn: &DatabaseConnection, repo: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+    // find conn, name, version
+    let pkg = match orm::models::find_pkg(conn, name, version).await {
+        Ok(Some(pkg)) => pkg,
+        Ok(None) => return Err("❌ Package not found in database".into()),
+        Err(e) => return Err(format!("❌ DB error: {:?}", e).into()),
+    };
+
+    // validate if package has encrypted path
+    let encrypted_path = match pkg.encrypted_path {
+        Some(path) => PathBuf::from(path),
+        None => return Err("Package has no encrypted path.".into()),
+    };
+
+    // determine destination dir
+    let export_dir = match repo {
+        Some(path) => PathBuf::from(path),
+        None => storage::get_securepkg_dir().join("exports")
+    };
+
+    // create securepkg/exports folder
+    if !export_dir.exists() {
+        fs::create_dir_all(&export_dir)?;
+    } else {
+        println!("📁 Already existing Exports folder: {}", export_dir.display());
+    }
+
+    // add filename and copy to export_path
+    let export_path = export_dir.join(encrypted_path.file_name().unwrap());
+    fs::copy(&encrypted_path, &export_path)?;
+    println!("📤 Package exported to {:?}", export_path);
+    Ok(())
 }

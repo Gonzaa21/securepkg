@@ -13,3 +13,7 @@ securepkg/
 └── Cargo.toml
 ```
 iniciar: cargo run -- init
+
+hacer package install
+hacer package list
+hacer package show
