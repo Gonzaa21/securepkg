@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use crate::{orm::{self, models::find_pkg}, package::{encrypt_zip, sign_pkg}, storage};
+use crate::{orm::{self, models::find_pkg, models::list_pkg}, package::{encrypt_zip, sign_pkg}, storage};
 use std::{fs, path::PathBuf};
 use crate::package::{zip_dir, export_pkg, install_pkg};
 use sha2::{Digest, Sha256};
@@ -52,7 +52,8 @@ pub enum PackageSubcommand {
         version: String,
         #[arg(long, value_name = "PATH")]
         from_file: Option<PathBuf>
-    }
+    },
+    List,
 }
 
 pub async fn run() {
@@ -197,6 +198,27 @@ pub async fn run() {
                 PackageSubcommand::Install { name, version, from_file } => {
                     if let Err(e) = install_pkg(&name, &version, from_file.as_deref()).await {
                         eprintln!("❌ Installation failed: {e}");
+                    }
+                }
+                PackageSubcommand::List => {
+                    // connect to db
+                    let conn = match orm::connectdb().await {
+                        Ok(conn) => conn,
+                        Err(e) => {
+                            eprintln!("❌ Error to connect DB: {e}");
+                            return;
+                        }
+                    };
+
+                    match list_pkg(&conn).await {
+                        Ok(pkgs) if pkgs.is_empty() => println!("📦 No packages registered in the database"),
+                        Ok(pkgs) => {
+                            println!("📚 Registered packages:");
+                            for pkg in pkgs {
+                                println!("- {} {} by {}", pkg.name, pkg.version, pkg.author.unwrap_or_else(|| "unknown".to_string()))
+                            }
+                        }
+                        Err(e) => eprintln!("❌ Failed to retrieve packages: {e}"),
                     }
                 }
             }

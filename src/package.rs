@@ -2,11 +2,10 @@ use std::{fs::{self, File}, path::{Path, PathBuf}};
 use chacha20poly1305::{ChaCha20Poly1305, Key, KeyInit, Nonce, aead::{Aead, OsRng, rand_core::RngCore}};
 use zip::{write::FileOptions, CompressionMethod};
 use walkdir::WalkDir;
-use rsa::{pkcs1::DecodeRsaPrivateKey,pkcs1::DecodeRsaPublicKey, RsaPrivateKey, Pkcs1v15Sign, RsaPublicKey};
+use rsa::{pkcs1::DecodeRsaPrivateKey,pkcs1::DecodeRsaPublicKey, RsaPrivateKey, Pkcs1v15Sign, RsaPublicKey, traits::SignatureScheme};
 use sha2::{Digest, Sha256};
 use crate::{orm, storage};
 use sea_orm::DatabaseConnection;
-use rsa::traits::SignatureScheme;
 
 // to compress dirs in .zip
 pub fn zip_dir(src_dir: &Path, dst_file: &Path) -> zip::result::ZipResult<()> {

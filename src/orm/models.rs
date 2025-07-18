@@ -65,3 +65,8 @@ pub async fn update_signature(db: &DatabaseConnection, name: &str, version: &str
     }
     Ok(())
 }
+
+pub async fn list_pkg(conn: &DatabaseConnection) -> Result<Vec<Model>, DbErr> {
+    let packages = Entity::find().all(conn).await?;
+    Ok(packages)
+}
