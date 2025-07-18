@@ -1,10 +1,9 @@
 use sea_query::SqliteQueryBuilder;
-use sea_orm::{Database, DatabaseConnection};
-use sea_orm::{DbBackend, Statement, ConnectionTrait};
+use sea_orm::{Database, DatabaseConnection, DbBackend, Statement, ConnectionTrait};
 use sea_query::{Table, ColumnDef, Expr, Iden};
 use crate::storage;
 pub mod models;
-pub use models::insert_package;
+pub mod publish_fn;
 
 // connect to database
 pub async fn connectdb() -> Result<DatabaseConnection, sea_orm::DbErr> {

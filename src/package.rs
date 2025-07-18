@@ -82,7 +82,7 @@ pub fn sign_pkg(pkg_path: &Path) -> Result<Vec<u8>, Box<dyn std::error::Error>> 
 // export pkg
 pub async fn export_pkg(name: &str, version: &str, conn: &DatabaseConnection, repo: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     // find conn, name, version
-    let pkg = match orm::models::find_pkg(conn, name, version).await {
+    let pkg = match orm::publish_fn::find_pkg(conn, name, version).await {
         Ok(Some(pkg)) => pkg,
         Ok(None) => return Err("Package not found in database".into()),
         Err(e) => return Err(format!("DB error: {:?}", e).into()),

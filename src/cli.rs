@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use crate::{orm::{self, models::find_pkg, models::list_pkg}, package::{encrypt_zip, sign_pkg}, storage};
+use crate::{orm::{self, publish_fn::find_pkg, publish_fn::list_pkg}, package::{encrypt_zip, sign_pkg}, storage};
 use std::{fs, path::PathBuf};
 use crate::package::{zip_dir, export_pkg, install_pkg};
 use sha2::{Digest, Sha256};
@@ -110,7 +110,7 @@ pub async fn run() {
                     };
 
                     orm::create_table(&conn).await.expect("❌ Error creating table");
-                    match orm::insert_package(&conn, name, version, author, Some(hash_hex), Some(output.to_string_lossy().to_string())).await {
+                    match orm::publish_fn::insert_package(&conn, name, version, author, Some(hash_hex), Some(output.to_string_lossy().to_string())).await {
                         Ok(_) => println!("📦 Package inserted into database"),
                         Err(e) => eprintln!("❌ Error inserting into database: {:?}", e),
                     }
@@ -165,7 +165,7 @@ pub async fn run() {
                     };
 
                     // save sign in db
-                    match orm::models::update_signature(&conn, &name, &version, signature).await {
+                    match orm::publish_fn::update_signature(&conn, &name, &version, signature).await {
                         Ok(_) => println!("🗄️ Signature updated in database"),
                         Err(e) => eprintln!("❌ Error saving signature in DB: {:?}", e),
                     }
