@@ -4,6 +4,7 @@ use std::{fs, path::PathBuf};
 use crate::package::{zip_dir, export_pkg, install_pkg};
 use sha2::{Digest, Sha256};
 use hex;
+use crate::connect_db;
 
 // CLI struct
 #[derive(Parser)]
@@ -116,14 +117,7 @@ pub async fn run() {
                     }
                 },
                 PackageSubcommand::Publish { name, version, export, repo } => {
-                    // connect to db
-                    let conn = match orm::connectdb().await {
-                        Ok(conn) => conn,
-                        Err(e) => {
-                            eprintln!("❌ Error to connect DB: {e}");
-                            return;
-                        }
-                    };
+                    let conn = connect_db!();
 
                     // verify if package exists
                     let pkg = match find_pkg(&conn, &name, &version).await {
@@ -180,14 +174,7 @@ pub async fn run() {
 
                 }
                 PackageSubcommand::Export { name, version, repo } => {
-                    // connect to db
-                    let conn = match orm::connectdb().await {
-                        Ok(conn) => conn,
-                        Err(e) => {
-                            eprintln!("❌ Error to connect DB: {e}");
-                            return;
-                        }
-                    };
+                    let conn = connect_db!();
 
                     // export
                     let repo_path = repo.as_deref();
@@ -201,14 +188,7 @@ pub async fn run() {
                     }
                 }
                 PackageSubcommand::List => {
-                    // connect to db
-                    let conn = match orm::connectdb().await {
-                        Ok(conn) => conn,
-                        Err(e) => {
-                            eprintln!("❌ Error to connect DB: {e}");
-                            return;
-                        }
-                    };
+                    let conn = connect_db!();
 
                     match list_pkg(&conn).await {
                         Ok(pkgs) if pkgs.is_empty() => println!("📦 No packages registered in the database"),
